@@ -38,8 +38,6 @@ part2/
 ├─ base_repository.py
 └─ in_memory.py
 
-yaml
-Copy code
 
 ### Layers
 
@@ -72,8 +70,7 @@ python3 -m venv .venv
 pip install -r requirements.txt
 Running the Application
 Development server
-bash
-Copy code
+
 . .venv/bin/activate
 python3 run.py
 The API is configured with Swagger documentation at:
@@ -88,8 +85,6 @@ A local “no-network” test using Flask’s test_client is provided in smoke_t
 
 Run:
 
-bash
-Copy code
 . .venv/bin/activate
 python3 smoke_test.py
 Expected output:
@@ -104,8 +99,6 @@ GET /api/v1/health/
 
 Response (200):
 
-json
-Copy code
 { "status": "ok" }
 Notes
 Authentication (JWT) and role-based access control are intentionally not implemented in Part 2 Task 0.
