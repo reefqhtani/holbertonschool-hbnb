@@ -21,3 +21,8 @@ def create_app():
 if __name__ == "__main__":
     app = create_app()
     app.run(debug=True, host="0.0.0.0", port=5000i)
+
+from app.api.v1.routes import api_places
+
+api.add_namespace(api_places, path="/api/v1/places")
+    

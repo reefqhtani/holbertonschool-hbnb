@@ -1,9 +1,149 @@
+from business.place import Place
+from business.user import User
+from business.amenity import Amenity
+from persistence.repository import Repository
+from flask_restx import Namespace, Resource, fields
 from flask_restx import Namespace, Resource, fields
 from business.amenity import Amenity
 from persistence.repository import Repository
 from flask_restx import Namespace, Resource, fields
 from business.user import User
 from persistence.repository import Repository
+
+# Namespace for places
+api_places = Namespace('places', description='Place operations')
+
+# Reuse in-memory repository
+repo = Repository()
+
+place_model = api_places.model('Place', {
+    'name': fields.String(required=True, description="Place name"),
+    'description': fields.String(required=False, description="Place description"),
+    'owner_id': fields.String(required=True, description="ID of the owner user"),
+    'amenity_ids': fields.List(fields.String, description="List of Amenity IDs"),
+    'price_by_night': fields.Float(required=True, description="Price per night"),
+    'latitude': fields.Float(required=False, description="Latitude"),
+    'longitude': fields.Float(required=False, description="Longitude")
+})
+
+@api_places.route('/')
+class PlaceList(Resource):
+    @api_places.expect(place_model)
+    def post(self):
+        """Create a new place"""
+        data = api_places.payload
+
+        # Validate owner exists
+        owner_list = repo.all('User')
+        if not any(u.id == data['owner_id'] for u in owner_list):
+            return {"message": "Owner not found"}, 400
+
+        # Validate amenities exist
+        amenities_list = repo.all('Amenity')
+        amenity_objs = []
+        for amenity_id in data.get('amenity_ids', []):
+            amenity = next((a for a in amenities_list if a.id == amenity_id), None)
+            if amenity:
+                amenity_objs.append(amenity)
+            else:
+                return {"message": f"Amenity {amenity_id} not found"}, 400
+
+        new_place = Place(
+            name=data['name'],
+            description=data.get('description', ''),
+            owner_id=data['owner_id'],
+            amenities=amenity_objs,
+            price_by_night=data['price_by_night'],
+            latitude=data.get('latitude'),
+            longitude=data.get('longitude')
+        )
+        repo.add('Place', new_place)
+
+        # Return with owner details
+        owner = next(u for u in owner_list if u.id == new_place.owner_id)
+        place_dict = new_place.to_dict()
+        place_dict['owner'] = {
+            'first_name': owner.first_name,
+            'last_name': owner.last_name
+        }
+        return place_dict, 201
+
+    def get(self):
+        """Get all places"""
+        places = repo.all('Place')
+        users = repo.all('User')
+        result = []
+        for p in places:
+            owner = next((u for u in users if u.id == p.owner_id), None)
+            place_dict = p.to_dict()
+            if owner:
+                place_dict['owner'] = {
+                    'first_name': owner.first_name,
+                    'last_name': owner.last_name
+                }
+            result.append(place_dict)
+        return result, 200
+@api_places.route('/<string:place_id>')
+class PlaceItem(Resource):
+    def get(self, place_id):
+        """Get a place by ID"""
+        places = repo.all('Place')
+        users = repo.all('User')
+        place = next((p for p in places if p.id == place_id), None)
+        if not place:
+            return {"message": "Place not found"}, 404
+
+        owner = next((u for u in users if u.id == place.owner_id), None)
+        place_dict = place.to_dict()
+        if owner:
+            place_dict['owner'] = {
+                'first_name': owner.first_name,
+                'last_name': owner.last_name
+            }
+        return place_dict, 200
+
+    @api_places.expect(place_model)
+    def put(self, place_id):
+        """Update a place"""
+        places = repo.all('Place')
+        place = next((p for p in places if p.id == place_id), None)
+        if not place:
+            return {"message": "Place not found"}, 404
+
+        data = api_places.payload
+        if 'name' in data:
+            place.name = data['name']
+        if 'description' in data:
+            place.description = data['description']
+        if 'price_by_night' in data:
+            place.price_by_night = data['price_by_night']
+        if 'latitude' in data:
+            place.latitude = data['latitude']
+        if 'longitude' in data:
+            place.longitude = data['longitude']
+
+        # Update amenities if provided
+        if 'amenity_ids' in data:
+            amenities_list = repo.all('Amenity')
+            amenity_objs = []
+            for aid in data['amenity_ids']:
+                amenity = next((a for a in amenities_list if a.id == aid), None)
+                if amenity:
+                    amenity_objs.append(amenity)
+            place.amenities = amenity_objs
+
+        place.save()
+
+        # Return updated place with owner details
+        users = repo.all('User')
+        owner = next((u for u in users if u.id == place.owner_id), None)
+        place_dict = place.to_dict()
+        if owner:
+            place_dict['owner'] = {
+                'first_name': owner.first_name,
+                'last_name': owner.last_name
+            }
+        return place_dict, 200
 
 # Namespace for amenities
 api_amenities = Namespace('amenities', description='Amenity operations')
