@@ -25,4 +25,8 @@ if __name__ == "__main__":
 from app.api.v1.routes import api_places
 
 api.add_namespace(api_places, path="/api/v1/places")
+
+from app.api.v1.routes import api_reviews
+
+api.add_namespace(api_reviews, path="/api/v1/reviews")
     

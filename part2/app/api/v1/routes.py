@@ -1,3 +1,8 @@
+from business.review import Review
+from business.user import User
+from business.place import Place
+from persistence.repository import Repository
+from flask_restx import Namespace, Resource, fields
 from business.place import Place
 from business.user import User
 from business.amenity import Amenity
@@ -9,6 +14,77 @@ from persistence.repository import Repository
 from flask_restx import Namespace, Resource, fields
 from business.user import User
 from persistence.repository import Repository
+
+# Namespace for reviews
+api_reviews = Namespace('reviews', description='Review operations')
+
+# Reuse in-memory repository
+repo = Repository()
+review_model = api_reviews.model('Review', {
+    'user_id': fields.String(required=True, description="ID of the user who writes the review"),
+    'place_id': fields.String(required=True, description="ID of the place being reviewed"),
+    'text': fields.String(required=True, description="Text of the review")
+})
+@api_reviews.route('/')
+class ReviewList(Resource):
+    @api_reviews.expect(review_model)
+    def post(self):
+        """Create a new review"""
+        data = api_reviews.payload
+
+        # Validate user exists
+        user_list = repo.all('User')
+        if not any(u.id == data['user_id'] for u in user_list):
+            return {"message": "User not found"}, 400
+
+        # Validate place exists
+        place_list = repo.all('Place')
+        if not any(p.id == data['place_id'] for p in place_list):
+            return {"message": "Place not found"}, 400
+
+        new_review = Review(
+            user_id=data['user_id'],
+            place_id=data['place_id'],
+            text=data['text']
+        )
+        repo.add('Review', new_review)
+
+        return new_review.to_dict(), 201
+
+    def get(self):
+        """Get all reviews"""
+        reviews = repo.all('Review')
+        return [r.to_dict() for r in reviews], 200
+@api_reviews.route('/<string:review_id>')
+class ReviewItem(Resource):
+    def get(self, review_id):
+        """Get a review by ID"""
+        reviews = repo.all('Review')
+        review = next((r for r in reviews if r.id == review_id), None)
+        if not review:
+            return {"message": "Review not found"}, 404
+        return review.to_dict(), 200
+    @api_reviews.expect(review_model)
+    def put(self, review_id):
+        """Update a review"""
+        reviews = repo.all('Review')
+        review = next((r for r in reviews if r.id == review_id), None)
+        if not review:
+            return {"message": "Review not found"}, 404
+
+        data = api_reviews.payload
+        review.text = data.get('text', review.text)
+        review.save()
+        return review.to_dict(), 200
+        def delete(self, review_id):
+        """Delete a review"""
+        reviews = repo.all('Review')
+        review = next((r for r in reviews if r.id == review_id), None)
+        if not review:
+            return {"message": "Review not found"}, 404
+
+        repo.delete('Review', review.id)
+        return {}, 204
 
 # Namespace for places
 api_places = Namespace('places', description='Place operations')
