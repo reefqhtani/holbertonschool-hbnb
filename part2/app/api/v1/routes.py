@@ -1,350 +1,303 @@
-from business.review import Review
-from business.user import User
-from business.place import Place
-from persistence.repository import Repository
 from flask_restx import Namespace, Resource, fields
-from business.place import Place
-from business.user import User
-from business.amenity import Amenity
-from persistence.repository import Repository
-from flask_restx import Namespace, Resource, fields
-from flask_restx import Namespace, Resource, fields
-from business.amenity import Amenity
-from persistence.repository import Repository
-from flask_restx import Namespace, Resource, fields
-from business.user import User
-from persistence.repository import Repository
 
-# Namespace for reviews
+from app.business.user import User
+from app.business.place import Place
+from app.business.review import Review
+from app.business.amenity import Amenity
+from app.persistence.repository import Repository
+
+# =====================================================
+# Shared Repository (IMPORTANT: only ONE instance)
+# =====================================================
+repo = Repository()
+
+# =====================================================
+# Namespaces
+# =====================================================
+api_health = Namespace('health', description='Health check')
+api_users = Namespace('users', description='User operations')
+api_amenities = Namespace('amenities', description='Amenity operations')
+api_places = Namespace('places', description='Place operations')
 api_reviews = Namespace('reviews', description='Review operations')
 
-# Reuse in-memory repository
-repo = Repository()
-review_model = api_reviews.model('Review', {
-    'user_id': fields.String(required=True, description="ID of the user who writes the review"),
-    'place_id': fields.String(required=True, description="ID of the place being reviewed"),
-    'text': fields.String(required=True, description="Text of the review")
+# =====================================================
+# Models (Swagger)
+# =====================================================
+user_model = api_users.model('User', {
+    'email': fields.String(required=True),
+    'password': fields.String(required=True),
+    'first_name': fields.String,
+    'last_name': fields.String
 })
-@api_reviews.route('/')
-class ReviewList(Resource):
-    @api_reviews.expect(review_model)
-    def post(self):
-        """Create a new review"""
-        data = api_reviews.payload
-
-        # Validate user exists
-        user_list = repo.all('User')
-        if not any(u.id == data['user_id'] for u in user_list):
-            return {"message": "User not found"}, 400
-
-        # Validate place exists
-        place_list = repo.all('Place')
-        if not any(p.id == data['place_id'] for p in place_list):
-            return {"message": "Place not found"}, 400
-
-        new_review = Review(
-            user_id=data['user_id'],
-            place_id=data['place_id'],
-            text=data['text']
-        )
-        repo.add('Review', new_review)
-
-        return new_review.to_dict(), 201
-
-    def get(self):
-        """Get all reviews"""
-        reviews = repo.all('Review')
-        return [r.to_dict() for r in reviews], 200
-@api_reviews.route('/<string:review_id>')
-class ReviewItem(Resource):
-    def get(self, review_id):
-        """Get a review by ID"""
-        reviews = repo.all('Review')
-        review = next((r for r in reviews if r.id == review_id), None)
-        if not review:
-            return {"message": "Review not found"}, 404
-        return review.to_dict(), 200
-    @api_reviews.expect(review_model)
-    def put(self, review_id):
-        """Update a review"""
-        reviews = repo.all('Review')
-        review = next((r for r in reviews if r.id == review_id), None)
-        if not review:
-            return {"message": "Review not found"}, 404
-
-        data = api_reviews.payload
-        review.text = data.get('text', review.text)
-        review.save()
-        return review.to_dict(), 200
-        def delete(self, review_id):
-        """Delete a review"""
-        reviews = repo.all('Review')
-        review = next((r for r in reviews if r.id == review_id), None)
-        if not review:
-            return {"message": "Review not found"}, 404
-
-        repo.delete('Review', review.id)
-        return {}, 204
-
-# Namespace for places
-api_places = Namespace('places', description='Place operations')
-
-# Reuse in-memory repository
-repo = Repository()
-
-place_model = api_places.model('Place', {
-    'name': fields.String(required=True, description="Place name"),
-    'description': fields.String(required=False, description="Place description"),
-    'owner_id': fields.String(required=True, description="ID of the owner user"),
-    'amenity_ids': fields.List(fields.String, description="List of Amenity IDs"),
-    'price_by_night': fields.Float(required=True, description="Price per night"),
-    'latitude': fields.Float(required=False, description="Latitude"),
-    'longitude': fields.Float(required=False, description="Longitude")
-})
-
-@api_places.route('/')
-class PlaceList(Resource):
-    @api_places.expect(place_model)
-    def post(self):
-        """Create a new place"""
-        data = api_places.payload
-
-        # Validate owner exists
-        owner_list = repo.all('User')
-        if not any(u.id == data['owner_id'] for u in owner_list):
-            return {"message": "Owner not found"}, 400
-
-        # Validate amenities exist
-        amenities_list = repo.all('Amenity')
-        amenity_objs = []
-        for amenity_id in data.get('amenity_ids', []):
-            amenity = next((a for a in amenities_list if a.id == amenity_id), None)
-            if amenity:
-                amenity_objs.append(amenity)
-            else:
-                return {"message": f"Amenity {amenity_id} not found"}, 400
-
-        new_place = Place(
-            name=data['name'],
-            description=data.get('description', ''),
-            owner_id=data['owner_id'],
-            amenities=amenity_objs,
-            price_by_night=data['price_by_night'],
-            latitude=data.get('latitude'),
-            longitude=data.get('longitude')
-        )
-        repo.add('Place', new_place)
-
-        # Return with owner details
-        owner = next(u for u in owner_list if u.id == new_place.owner_id)
-        place_dict = new_place.to_dict()
-        place_dict['owner'] = {
-            'first_name': owner.first_name,
-            'last_name': owner.last_name
-        }
-        return place_dict, 201
-
-    def get(self):
-        """Get all places"""
-        places = repo.all('Place')
-        users = repo.all('User')
-        result = []
-        for p in places:
-            owner = next((u for u in users if u.id == p.owner_id), None)
-            place_dict = p.to_dict()
-            if owner:
-                place_dict['owner'] = {
-                    'first_name': owner.first_name,
-                    'last_name': owner.last_name
-                }
-            result.append(place_dict)
-        return result, 200
-@api_places.route('/<string:place_id>')
-class PlaceItem(Resource):
-    def get(self, place_id):
-        """Get a place by ID"""
-        places = repo.all('Place')
-        users = repo.all('User')
-        place = next((p for p in places if p.id == place_id), None)
-        if not place:
-            return {"message": "Place not found"}, 404
-
-        owner = next((u for u in users if u.id == place.owner_id), None)
-        place_dict = place.to_dict()
-        if owner:
-            place_dict['owner'] = {
-                'first_name': owner.first_name,
-                'last_name': owner.last_name
-            }
-        return place_dict, 200
-
-    @api_places.expect(place_model)
-    def put(self, place_id):
-        """Update a place"""
-        places = repo.all('Place')
-        place = next((p for p in places if p.id == place_id), None)
-        if not place:
-            return {"message": "Place not found"}, 404
-
-        data = api_places.payload
-        if 'name' in data:
-            place.name = data['name']
-        if 'description' in data:
-            place.description = data['description']
-        if 'price_by_night' in data:
-            place.price_by_night = data['price_by_night']
-        if 'latitude' in data:
-            place.latitude = data['latitude']
-        if 'longitude' in data:
-            place.longitude = data['longitude']
-
-        # Update amenities if provided
-        if 'amenity_ids' in data:
-            amenities_list = repo.all('Amenity')
-            amenity_objs = []
-            for aid in data['amenity_ids']:
-                amenity = next((a for a in amenities_list if a.id == aid), None)
-                if amenity:
-                    amenity_objs.append(amenity)
-            place.amenities = amenity_objs
-
-        place.save()
-
-        # Return updated place with owner details
-        users = repo.all('User')
-        owner = next((u for u in users if u.id == place.owner_id), None)
-        place_dict = place.to_dict()
-        if owner:
-            place_dict['owner'] = {
-                'first_name': owner.first_name,
-                'last_name': owner.last_name
-            }
-        return place_dict, 200
-
-# Namespace for amenities
-api_amenities = Namespace('amenities', description='Amenity operations')
-
-# In-memory repository (shared with other entities)
-repo = Repository()
 
 amenity_model = api_amenities.model('Amenity', {
-    'name': fields.String(required=True, description="Amenity name"),
-    'description': fields.String(required=False, description="Amenity description")
+    'name': fields.String(required=True)
 })
 
-@api_amenities.route('/')
-class AmenityList(Resource):
-    @api_amenities.expect(amenity_model)
-    def post(self):
-        """Create a new amenity"""
-        data = api_amenities.payload
-        new_amenity = Amenity(name=data['name'], description=data.get('description', ''))
-        repo.add('Amenity', new_amenity)
-        return new_amenity.to_dict(), 201
+place_model = api_places.model('Place', {
+    'name': fields.String(required=True),
+    'description': fields.String,
+    'owner_id': fields.String(required=True),
+    'amenity_ids': fields.List(fields.String),
+    'price_by_night': fields.Float(required=True),
+    'latitude': fields.Float,
+    'longitude': fields.Float
+})
 
+review_model = api_reviews.model('Review', {
+    'user_id': fields.String(required=True),
+    'place_id': fields.String(required=True),
+    'text': fields.String(required=True)
+})
+
+# =====================================================
+# Health
+# =====================================================
+@api_health.route('/')
+class Health(Resource):
     def get(self):
-        """Get list of all amenities"""
-        amenities = repo.all('Amenity')
-        return [a.to_dict() for a in amenities], 200
+        return {"status": "HBnB API running"}, 200
 
-@api_amenities.route('/<string:amenity_id>')
-class AmenityItem(Resource):
-    def get(self, amenity_id):
-        """Get an amenity by ID"""
-        amenities = repo.all('Amenity')
-        for a in amenities:
-            if a.id == amenity_id:
-                return a.to_dict(), 200
-        return {"message": "Amenity not found"}, 404
-
-    @api_amenities.expect(amenity_model)
-    def put(self, amenity_id):
-        """Update amenity"""
-        amenities = repo.all('Amenity')
-        for a in amenities:
-            if a.id == amenity_id:
-                data = api_amenities.payload
-                a.name = data.get('name', a.name)
-                a.description = data.get('description', a.description)
-                a.save()
-                return a.to_dict(), 200
-        return {"message": "Amenity not found"}, 404
-
-# Namespace for users
-api_users = Namespace('users', description='User operations')
-
-# In-memory repository
-repo = Repository()
-
-# User model for API documentation
-user_model = api_users.model('User', {
-    'first_name': fields.String(required=True, description="User's first name"),
-    'last_name': fields.String(required=True, description="User's last name"),
-    'email': fields.String(required=True, description="User's email"),
-    'password': fields.String(required=True, description="User's password")
-})
-
+# =====================================================
+# Users
+# =====================================================
 @api_users.route('/')
 class UserList(Resource):
     @api_users.expect(user_model)
     def post(self):
-        """Create a new user"""
         data = api_users.payload
-        new_user = User(
-            first_name=data['first_name'],
-            last_name=data['last_name'],
+
+        if not data.get('email'):
+            return {"message": "Email is required"}, 400
+        if not data.get('password'):
+            return {"message": "Password is required"}, 400
+
+        user = User(
             email=data['email'],
-            password=data['password']
+            password=data['password'],
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name')
         )
-        repo.add('User', new_user)
-        user_dict = new_user.to_dict()
-        user_dict.pop('password', None)  # do not return password
-        return user_dict, 201
+        repo.add('User', user)
+
+        result = user.to_dict()
+        result.pop('password', None)
+        return result, 201
 
     def get(self):
-        """Get list of all users"""
         users = repo.all('User')
         result = []
         for u in users:
-            u_dict = u.to_dict()
-            u_dict.pop('password', None)  # hide password
-            result.append(u_dict)
+            d = u.to_dict()
+            d.pop('password', None)
+            result.append(d)
         return result, 200
+
 
 @api_users.route('/<string:user_id>')
 class UserItem(Resource):
     def get(self, user_id):
-        """Get a user by ID"""
-        users = repo.all('User')
-        for u in users:
-            if u.id == user_id:
-                u_dict = u.to_dict()
-                u_dict.pop('password', None)
-                return u_dict, 200
-        return {"message": "User not found"}, 404
+        user = repo.get('User', user_id)
+        if not user:
+            return {"message": "User not found"}, 404
+        d = user.to_dict()
+        d.pop('password', None)
+        return d, 200
 
     @api_users.expect(user_model)
     def put(self, user_id):
-        """Update user information"""
-        users = repo.all('User')
-        for u in users:
-            if u.id == user_id:
-                data = api_users.payload
-                u.first_name = data.get('first_name', u.first_name)
-                u.last_name = data.get('last_name', u.last_name)
-                u.email = data.get('email', u.email)
-                if 'password' in data:
-                    u.password = data['password']
-                u.save()
-                u_dict = u.to_dict()
-                u_dict.pop('password', None)
-                return u_dict, 200
-        return {"message": "User not found"}, 404
+        user = repo.get('User', user_id)
+        if not user:
+            return {"message": "User not found"}, 404
 
-api = Namespace("health", description="Health check")
+        data = api_users.payload
+        user.first_name = data.get('first_name', user.first_name)
+        user.last_name = data.get('last_name', user.last_name)
+        user.email = data.get('email', user.email)
+        if 'password' in data:
+            user.password = data['password']
 
+        user.save()
+        d = user.to_dict()
+        d.pop('password', None)
+        return d, 200
 
-@api.route("/")
-class Health(Resource):
+# =====================================================
+# Amenities
+# =====================================================
+@api_amenities.route('/')
+class AmenityList(Resource):
+    @api_amenities.expect(amenity_model)
+    def post(self):
+        data = api_amenities.payload
+        if not data.get('name'):
+            return {"message": "Amenity name required"}, 400
+
+        amenity = Amenity(name=data['name'])
+        repo.add('Amenity', amenity)
+        return amenity.to_dict(), 201
+
     def get(self):
-        return {"status": "HBnB API running"}
+        return [a.to_dict() for a in repo.all('Amenity')], 200
+
+
+@api_amenities.route('/<string:amenity_id>')
+class AmenityItem(Resource):
+    def get(self, amenity_id):
+        amenity = repo.get('Amenity', amenity_id)
+        if not amenity:
+            return {"message": "Amenity not found"}, 404
+        return amenity.to_dict(), 200
+
+    @api_amenities.expect(amenity_model)
+    def put(self, amenity_id):
+        amenity = repo.get('Amenity', amenity_id)
+        if not amenity:
+            return {"message": "Amenity not found"}, 404
+
+        data = api_amenities.payload
+        amenity.name = data.get('name', amenity.name)
+        amenity.save()
+        return amenity.to_dict(), 200
+
+# =====================================================
+# Places
+# =====================================================
+@api_places.route('/')
+class PlaceList(Resource):
+    @api_places.expect(place_model)
+    def post(self):
+        data = api_places.payload
+
+        owner = repo.get('User', data.get('owner_id'))
+        if not owner:
+            return {"message": "Owner not found"}, 400
+
+        try:
+            price = float(data['price_by_night'])
+        except Exception:
+            return {"message": "price_by_night must be a number"}, 400
+
+        amenities = []
+        for aid in data.get('amenity_ids', []):
+            amenity = repo.get('Amenity', aid)
+            if not amenity:
+                return {"message": f"Amenity {aid} not found"}, 400
+            amenities.append(amenity)
+
+        place = Place(
+            name=data['name'],
+            description=data.get('description'),
+            owner_id=owner.id,
+            amenities=amenities,
+            price_by_night=price,
+            latitude=data.get('latitude'),
+            longitude=data.get('longitude')
+        )
+        repo.add('Place', place)
+
+        result = place.to_dict()
+        result['owner'] = {
+            "first_name": owner.first_name,
+            "last_name": owner.last_name
+        }
+        return result, 201
+
+    def get(self):
+        result = []
+        for p in repo.all('Place'):
+            owner = repo.get('User', p.owner_id)
+            d = p.to_dict()
+            if owner:
+                d['owner'] = {
+                    "first_name": owner.first_name,
+                    "last_name": owner.last_name
+                }
+            result.append(d)
+        return result, 200
+
+
+@api_places.route('/<string:place_id>')
+class PlaceItem(Resource):
+    def get(self, place_id):
+        place = repo.get('Place', place_id)
+        if not place:
+            return {"message": "Place not found"}, 404
+
+        owner = repo.get('User', place.owner_id)
+        d = place.to_dict()
+        if owner:
+            d['owner'] = {
+                "first_name": owner.first_name,
+                "last_name": owner.last_name
+            }
+        return d, 200
+
+    @api_places.expect(place_model)
+    def put(self, place_id):
+        place = repo.get('Place', place_id)
+        if not place:
+            return {"message": "Place not found"}, 404
+
+        data = api_places.payload
+        place.name = data.get('name', place.name)
+        place.description = data.get('description', place.description)
+        place.price_by_night = data.get('price_by_night', place.price_by_night)
+        place.latitude = data.get('latitude', place.latitude)
+        place.longitude = data.get('longitude', place.longitude)
+        place.save()
+        return place.to_dict(), 200
+
+# =====================================================
+# Reviews (WITH DELETE)
+# =====================================================
+@api_reviews.route('/')
+class ReviewList(Resource):
+    @api_reviews.expect(review_model)
+    def post(self):
+        data = api_reviews.payload
+
+        if not repo.get('User', data.get('user_id')):
+            return {"message": "User not found"}, 400
+        if not repo.get('Place', data.get('place_id')):
+            return {"message": "Place not found"}, 400
+        if not data.get('text'):
+            return {"message": "Review text required"}, 400
+
+        review = Review(
+            user_id=data['user_id'],
+            place_id=data['place_id'],
+            text=data['text']
+        )
+        repo.add('Review', review)
+        return review.to_dict(), 201
+
+    def get(self):
+        return [r.to_dict() for r in repo.all('Review')], 200
+
+
+@api_reviews.route('/<string:review_id>')
+class ReviewItem(Resource):
+    def get(self, review_id):
+        review = repo.get('Review', review_id)
+        if not review:
+            return {"message": "Review not found"}, 404
+        return review.to_dict(), 200
+
+    @api_reviews.expect(review_model)
+    def put(self, review_id):
+        review = repo.get('Review', review_id)
+        if not review:
+            return {"message": "Review not found"}, 404
+
+        review.text = api_reviews.payload.get('text', review.text)
+        review.save()
+        return review.to_dict(), 200
+
+    def delete(self, review_id):
+        review = repo.get('Review', review_id)
+        if not review:
+            return {"message": "Review not found"}, 404
+        repo.delete('Review', review_id)
+        return {}, 204
+

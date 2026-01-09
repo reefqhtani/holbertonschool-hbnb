@@ -23,3 +23,34 @@ class InMemoryRepository:
 
     def delete(self, obj_id):
         return self._storage.pop(obj_id, None)
+
+import uuid
+
+
+class Repository:
+    """In-memory repository"""
+
+    def __init__(self):
+        self._data = {
+            "User": {},
+            "Place": {},
+            "Review": {},
+            "Amenity": {}
+        }
+
+    def add(self, obj_type, obj):
+        """Add object to repository"""
+        self._data[obj_type][obj.id] = obj
+
+    def get(self, obj_type, obj_id):
+        """Get object by ID"""
+        return self._data[obj_type].get(obj_id)
+
+    def all(self, obj_type):
+        """Get all objects of a type"""
+        return list(self._data[obj_type].values())
+
+    def delete(self, obj_type, obj_id):
+        """Delete object by ID"""
+        if obj_id in self._data[obj_type]:
+            del self._data[obj_type][obj_id]
