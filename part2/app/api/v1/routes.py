@@ -1,6 +1,58 @@
 from flask_restx import Namespace, Resource, fields
+from business.amenity import Amenity
+from persistence.repository import Repository
+from flask_restx import Namespace, Resource, fields
 from business.user import User
 from persistence.repository import Repository
+
+# Namespace for amenities
+api_amenities = Namespace('amenities', description='Amenity operations')
+
+# In-memory repository (shared with other entities)
+repo = Repository()
+
+amenity_model = api_amenities.model('Amenity', {
+    'name': fields.String(required=True, description="Amenity name"),
+    'description': fields.String(required=False, description="Amenity description")
+})
+
+@api_amenities.route('/')
+class AmenityList(Resource):
+    @api_amenities.expect(amenity_model)
+    def post(self):
+        """Create a new amenity"""
+        data = api_amenities.payload
+        new_amenity = Amenity(name=data['name'], description=data.get('description', ''))
+        repo.add('Amenity', new_amenity)
+        return new_amenity.to_dict(), 201
+
+    def get(self):
+        """Get list of all amenities"""
+        amenities = repo.all('Amenity')
+        return [a.to_dict() for a in amenities], 200
+
+@api_amenities.route('/<string:amenity_id>')
+class AmenityItem(Resource):
+    def get(self, amenity_id):
+        """Get an amenity by ID"""
+        amenities = repo.all('Amenity')
+        for a in amenities:
+            if a.id == amenity_id:
+                return a.to_dict(), 200
+        return {"message": "Amenity not found"}, 404
+
+    @api_amenities.expect(amenity_model)
+    def put(self, amenity_id):
+        """Update amenity"""
+        amenities = repo.all('Amenity')
+        for a in amenities:
+            if a.id == amenity_id:
+                data = api_amenities.payload
+                a.name = data.get('name', a.name)
+                a.description = data.get('description', a.description)
+                a.save()
+                return a.to_dict(), 200
+        return {"message": "Amenity not found"}, 404
 
 # Namespace for users
 api_users = Namespace('users', description='User operations')

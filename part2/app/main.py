@@ -5,6 +5,10 @@ from app.api.v1.routes import api_users
 
 api.add_namespace(api_users, path="/api/v1/users")
 
+from app.api.v1.routes import api_amenities
+
+api.add_namespace(api_amenities, path="/api/v1/amenities")
+
 
 def create_app():
     app = Flask(__name__)
