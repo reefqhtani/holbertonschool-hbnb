@@ -1,12 +1,46 @@
 import uuid
 from datetime import datetime
 
-
 class BaseModel:
-    def __init__(self):
+    """Base class with common attributes and methods for all models"""
+    
+    def __init__(self, *args, **kwargs):
+        """Initialize a new BaseModel instance"""
         self.id = str(uuid.uuid4())
-        self.created_at = datetime.utcnow()
-        self.updated_at = datetime.utcnow()
-
+        self.created_at = datetime.now()
+        self.updated_at = datetime.now()
+        
+        # If kwargs is provided, set attributes from it
+        if kwargs:
+            for key, value in kwargs.items():
+                if key == "created_at" or key == "updated_at":
+                    # Convert string to datetime if needed
+                    if isinstance(value, str):
+                        try:
+                            value = datetime.fromisoformat(value)
+                        except ValueError:
+                            pass
+                setattr(self, key, value)
+    
+    def save(self):
+        """Update the updated_at timestamp whenever the object is modified"""
+        self.updated_at = datetime.now()
+    
+    def update(self, data):
+        """Update the attributes of the object based on the provided dictionary"""
+        for key, value in data.items():
+            if hasattr(self, key) and key not in ['id', 'created_at']:
+                setattr(self, key, value)
+        self.save()  # Update the updated_at timestamp
+    
     def to_dict(self):
-        return self.__dict__
+        """Convert the object to a dictionary"""
+        obj_dict = self.__dict__.copy()
+        obj_dict['__class__'] = self.__class__.__name__
+        obj_dict['created_at'] = self.created_at.isoformat()
+        obj_dict['updated_at'] = self.updated_at.isoformat()
+        return obj_dict
+    
+    def __str__(self):
+        """String representation of the object"""
+        return f"[{self.__class__.__name__}] ({self.id}) {self.__dict__}"
