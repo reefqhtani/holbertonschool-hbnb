@@ -12,11 +12,11 @@ def create_app():
               doc='/api/v1/')
     
     # Import and register namespaces
-    from app.api.v1.health import api_health
-    from app.api.v1.users import api_users
-    from app.api.v1.places import api_places
-    from app.api.v1.reviews import api_reviews
-    from app.api.v1.amenities import api_amenities
+    from app.api.v1.health import api as api_health
+    from app.api.v1.users import api as api_users
+    from app.api.v1.places import api as api_places
+    from app.api.v1.reviews import api as api_reviews
+    from app.api.v1.amenities import api as api_amenities
     
     api.add_namespace(api_health, path='/api/v1/health')
     api.add_namespace(api_users, path='/api/v1/users')

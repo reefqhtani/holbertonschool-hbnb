@@ -28,63 +28,32 @@ class User(BaseModel):
         # Validate the attributes
         self._validate()
     
-    @property
-    def first_name(self):
-        return self._first_name
-    
-    @first_name.setter
-    def first_name(self, value):
-        if not value or not isinstance(value, str):
+    def _validate(self):
+        """Validate all user attributes"""
+        # Validate first_name
+        if not self.first_name or not isinstance(self.first_name, str):
             raise ValueError("First name must be a non-empty string")
-        if len(value) > 50:
+        if len(self.first_name) > 50:
             raise ValueError("First name cannot exceed 50 characters")
-        self._first_name = value
-    
-    @property
-    def last_name(self):
-        return self._last_name
-    
-    @last_name.setter
-    def last_name(self, value):
-        if not value or not isinstance(value, str):
+        
+        # Validate last_name
+        if not self.last_name or not isinstance(self.last_name, str):
             raise ValueError("Last name must be a non-empty string")
-        if len(value) > 50:
+        if len(self.last_name) > 50:
             raise ValueError("Last name cannot exceed 50 characters")
-        self._last_name = value
-    
-    @property
-    def email(self):
-        return self._email
-    
-    @email.setter
-    def email(self, value):
-        if not value or not isinstance(value, str):
+        
+        # Validate email
+        if not self.email or not isinstance(self.email, str):
             raise ValueError("Email must be a non-empty string")
         
         # Basic email validation regex
         email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_regex, value):
+        if not re.match(email_regex, self.email):
             raise ValueError("Invalid email format")
         
-        self._email = value
-    
-    @property
-    def is_admin(self):
-        return self._is_admin
-    
-    @is_admin.setter
-    def is_admin(self, value):
-        if not isinstance(value, bool):
+        # Validate is_admin
+        if not isinstance(self.is_admin, bool):
             raise ValueError("is_admin must be a boolean")
-        self._is_admin = value
-    
-    def _validate(self):
-        """Validate all user attributes"""
-        # Trigger property setters to validate
-        self.first_name = self._first_name
-        self.last_name = self._last_name
-        self.email = self._email
-        self.is_admin = self._is_admin
     
     def to_dict(self):
         """Convert user to dictionary, excluding password"""
@@ -92,8 +61,6 @@ class User(BaseModel):
         # Remove password from dictionary for security
         if 'password' in user_dict:
             del user_dict['password']
-        if '_password' in user_dict:
-            del user_dict['_password']
         return user_dict
     
     def verify_password(self, password):

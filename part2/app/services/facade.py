@@ -17,82 +17,99 @@ class HBnBFacade:
     def _init_sample_data(self):
         """Initialize with some sample data for testing"""
         # Sample users
-        sample_users = [
-            User(
-                first_name="John",
-                last_name="Doe",
-                email="john.doe@example.com",
-                password="password123"
-            ),
-            User(
-                first_name="Jane",
-                last_name="Smith",
-                email="jane.smith@example.com",
-                password="password456"
-            ),
-        ]
-        for user in sample_users:
-            self.user_repo.add(user)
+        try:
+            sample_users = [
+                User(
+                    first_name="John",
+                    last_name="Doe",
+                    email="john.doe@example.com",
+                    password="password123"
+                ),
+                User(
+                    first_name="Jane",
+                    last_name="Smith",
+                    email="jane.smith@example.com",
+                    password="password456"
+                ),
+            ]
+            for user in sample_users:
+                self.user_repo.add(user)
+        except Exception as e:
+            print(f"Warning: Could not create sample users: {e}")
         
         # Sample amenities
-        sample_amenities = [
-            Amenity(name="Wi-Fi"),
-            Amenity(name="Pool"),
-            Amenity(name="Kitchen"),
-            Amenity(name="Parking"),
-            Amenity(name="Air Conditioning"),
-        ]
-        for amenity in sample_amenities:
-            self.amenity_repo.add(amenity)
+        try:
+            sample_amenities = [
+                Amenity(name="Wi-Fi"),
+                Amenity(name="Pool"),
+                Amenity(name="Kitchen"),
+                Amenity(name="Parking"),
+                Amenity(name="Air Conditioning"),
+            ]
+            for amenity in sample_amenities:
+                self.amenity_repo.add(amenity)
+        except Exception as e:
+            print(f"Warning: Could not create sample amenities: {e}")
         
-        # Sample places
-        owner = self.user_repo.get_all()[0]
-        sample_places = [
-            Place(
-                title="Cozy Apartment",
-                description="A cozy apartment in the city center",
-                price=100.0,
-                latitude=40.7128,
-                longitude=-74.0060,
-                owner=owner
-            ),
-            Place(
-                title="Beach House",
-                description="Beautiful house by the beach",
-                price=200.0,
-                latitude=34.0522,
-                longitude=-118.2437,
-                owner=owner
-            ),
-        ]
-        for place in sample_places:
-            # Add some amenities to places
-            wifi = sample_amenities[0]
-            pool = sample_amenities[1]
-            place.add_amenity(wifi)
-            place.add_amenity(pool)
-            self.place_repo.add(place)
+        # Sample places (need at least one user first)
+        try:
+            users = self.user_repo.get_all()
+            if users:
+                owner = users[0]
+                sample_places = [
+                    Place(
+                        title="Cozy Apartment",
+                        description="A cozy apartment in the city center",
+                        price=100.0,
+                        latitude=40.7128,
+                        longitude=-74.0060,
+                        owner=owner
+                    ),
+                    Place(
+                        title="Beach House",
+                        description="Beautiful house by the beach",
+                        price=200.0,
+                        latitude=34.0522,
+                        longitude=-118.2437,
+                        owner=owner
+                    ),
+                ]
+                for place in sample_places:
+                    # Add some amenities to places
+                    amenities = self.amenity_repo.get_all()
+                    if len(amenities) >= 2:
+                        place.add_amenity(amenities[0])
+                        place.add_amenity(amenities[1])
+                    self.place_repo.add(place)
+        except Exception as e:
+            print(f"Warning: Could not create sample places: {e}")
         
-        # Sample reviews
-        reviewer = self.user_repo.get_all()[1]
-        sample_reviews = [
-            Review(
-                text="Great place! Very comfortable.",
-                rating=5,
-                place=sample_places[0],
-                user=reviewer
-            ),
-            Review(
-                text="Nice view but a bit noisy.",
-                rating=4,
-                place=sample_places[1],
-                user=reviewer
-            ),
-        ]
-        for review in sample_reviews:
-            self.review_repo.add(review)
-            # Also add review to place
-            review.place.add_review(review)
+        # Sample reviews (need users and places first)
+        try:
+            users = self.user_repo.get_all()
+            places = self.place_repo.get_all()
+            if len(users) >= 2 and len(places) >= 2:
+                reviewer = users[1]
+                sample_reviews = [
+                    Review(
+                        text="Great place! Very comfortable.",
+                        rating=5,
+                        place=places[0],
+                        user=reviewer
+                    ),
+                    Review(
+                        text="Nice view but a bit noisy.",
+                        rating=4,
+                        place=places[1],
+                        user=reviewer
+                    ),
+                ]
+                for review in sample_reviews:
+                    self.review_repo.add(review)
+                    # Also add review to place
+                    review.place.add_review(review)
+        except Exception as e:
+            print(f"Warning: Could not create sample reviews: {e}")
     
     # User methods
     def create_user(self, user_data):

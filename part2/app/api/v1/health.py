@@ -1,18 +1,18 @@
 from flask_restx import Namespace, Resource, fields
 from app.services import facade
 
-api_health = Namespace('health', description='Health check')
+api = Namespace('health', description='Health check')
 
-health_response_model = api_health.model('HealthResponse', {
+health_response_model = api.model('HealthResponse', {
     'status': fields.String(description='Overall status'),
     'timestamp': fields.DateTime(description='Current timestamp'),
     'services': fields.Raw(description='Service status'),
     'counts': fields.Raw(description='Entity counts')
 })
 
-@api_health.route('/')
+@api.route('/')
 class Health(Resource):
-    @api_health.marshal_with(health_response_model)
+    @api.marshal_with(health_response_model)
     def get(self):
         """Get system health status"""
         from datetime import datetime

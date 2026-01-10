@@ -35,10 +35,20 @@ class BaseModel:
     
     def to_dict(self):
         """Convert the object to a dictionary"""
-        obj_dict = self.__dict__.copy()
-        obj_dict['__class__'] = self.__class__.__name__
+        obj_dict = {}
+        obj_dict['id'] = self.id
         obj_dict['created_at'] = self.created_at.isoformat()
         obj_dict['updated_at'] = self.updated_at.isoformat()
+        
+        # Add other attributes that don't start with underscore
+        for key, value in self.__dict__.items():
+            if not key.startswith('_'):
+                if key not in ['id', 'created_at', 'updated_at']:  # Already added
+                    if hasattr(value, 'isoformat'):  # Handle datetime objects
+                        obj_dict[key] = value.isoformat()
+                    else:
+                        obj_dict[key] = value
+        
         return obj_dict
     
     def __str__(self):
