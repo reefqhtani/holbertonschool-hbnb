@@ -147,42 +147,14 @@ class Place(BaseModel):
     def to_dict(self):
         """Convert place to dictionary"""
         place_dict = super().to_dict()
-        
-        # Remove the empty lists that base class added (they'll be replaced)
-        if 'reviews' in place_dict:
-            del place_dict['reviews']
-        if 'amenities' in place_dict:
-            del place_dict['amenities']
-        
-        # Add place attributes (they have underscore prefixes due to properties)
-        place_dict['title'] = self.title
-        place_dict['description'] = self.description
-        place_dict['price'] = self.price
-        place_dict['latitude'] = self.latitude
-        place_dict['longitude'] = self.longitude
-        
         # Convert owner to ID for serialization
         if hasattr(self, '_owner') and self._owner:
             place_dict['owner_id'] = self._owner.id
-            # Also include owner details as required
-            place_dict['owner'] = {
-                'id': self._owner.id,
-                'first_name': self._owner.first_name,
-                'last_name': self._owner.last_name,
-                'email': self._owner.email
-            }
-        
-        # Convert reviews and amenities to IDs and objects
+        # Convert reviews and amenities to IDs
         place_dict['review_ids'] = [review.id for review in self.reviews]
         place_dict['amenity_ids'] = [amenity.id for amenity in self.amenities]
-        
-        # Include amenity objects as required
-        place_dict['amenities'] = [
-            {'id': amenity.id, 'name': amenity.name}
-            for amenity in self.amenities
-        ]
-        
         return place_dict
+    
     def __str__(self):
         """String representation of Place"""
         return f"[Place] ({self.id}) {self.title} - ${self.price}/night"
