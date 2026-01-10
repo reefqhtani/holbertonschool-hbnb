@@ -79,13 +79,22 @@ class Review(BaseModel):
     def to_dict(self):
         """Convert review to dictionary"""
         review_dict = super().to_dict()
+        
+        # Remove empty lists that base class might have added
+        if 'reviews' in review_dict:
+            del review_dict['reviews']
+        
+        # Add review attributes (they have underscore prefixes due to properties)
+        review_dict['text'] = self.text
+        review_dict['rating'] = self.rating
+        
         # Convert place and user to IDs for serialization
         if hasattr(self, '_place') and self._place:
             review_dict['place_id'] = self._place.id
         if hasattr(self, '_user') and self._user:
             review_dict['user_id'] = self._user.id
+        
         return review_dict
-    
     def __str__(self):
         """String representation of Review"""
         return f"[Review] ({self.id}) {self.rating}/5 - {self.text[:50]}..."

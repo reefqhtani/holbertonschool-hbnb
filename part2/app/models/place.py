@@ -182,6 +182,17 @@ class Place(BaseModel):
             for amenity in self.amenities
         ]
         
+        # Include review objects as required
+        place_dict['reviews'] = [
+            {
+                'id': review.id,
+                'text': review.text,
+                'rating': review.rating,
+                'user_id': review.user.id
+            }
+            for review in self.reviews
+        ]
+        
         return place_dict
     def __str__(self):
         """String representation of Place"""
