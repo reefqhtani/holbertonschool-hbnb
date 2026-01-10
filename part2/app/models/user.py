@@ -46,6 +46,10 @@ class User(BaseModel):
         if not self.email or not isinstance(self.email, str):
             raise ValueError("Email must be a non-empty string")
         
+        # Check email length
+        if len(self.email) > 50:
+            raise ValueError("Email cannot exceed 50 characters")
+        
         # Basic email validation regex
         email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_regex, self.email):

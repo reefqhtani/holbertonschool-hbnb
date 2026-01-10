@@ -35,6 +35,14 @@ class Amenity(BaseModel):
         # Trigger property setter to validate
         self.name = self._name
     
+
+    def to_dict(self):
+        """Convert amenity to dictionary"""
+        amenity_dict = super().to_dict()
+        # Add the name attribute (it has underscore prefix due to property)
+        amenity_dict['name'] = self.name
+        return amenity_dict
+
     def __str__(self):
         """String representation of Amenity"""
         return f"[Amenity] ({self.id}) {self.name}"
