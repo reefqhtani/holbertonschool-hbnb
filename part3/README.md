@@ -1,187 +1,155 @@
-Holberton HBNB API
-Project Overview
+# HBnB Project - Part 3: Database Integration & Authentication
 
-This project is a RESTful API for a simplified Airbnb clone (HBNB) that allows users to manage users, places, reviews, and amenities. It is built using Flask, SQLAlchemy, and JWT authentication. The API implements role-based access control (RBAC) with administrators and authenticated users, providing secure and flexible management of resources.
+## Project Overview
+Welcome to Part 3 of the HBnB project. In this phase, we have transitioned the backend from in-memory storage to a persistent **SQLite database** using **SQLAlchemy ORM**. We have also implemented robust **JWT Authentication** and **Role-Based Access Control (RBAC)** to secure the API.
 
-The project is designed in modular layers:
+This project is a RESTful API for a simplified Airbnb clone, allowing users to manage Users, Places, Reviews, and Amenities with proper data relationships.
 
-Models: SQLAlchemy ORM models for all entities (User, Place, Review, Amenity)
+## Key Features
 
-Repositories: Generic and entity-specific repositories for database operations
+### 1. Database Persistence (SQLAlchemy)
+* Replaced in-memory storage with **SQLite** for development.
+* Mapped entities (**User, Place, Review, Amenity**) to database tables.
+* Established relationships:
+    * **One-to-Many:** User ↔ Places, User ↔ Reviews, Place ↔ Reviews.
+    * **Many-to-Many:** Place ↔ Amenities (via association table).
 
-Facade: Service layer that interacts with repositories and encapsulates business logic
+### 2. Authentication & Security
+* **JWT Authentication:** Secure login using `Flask-JWT-Extended`.
+* **Password Hashing:** Passwords are securely hashed using `bcrypt` before storage.
+* **RBAC (Role-Based Access Control):**
+    * **Admin:** Can manage all resources (Users, Amenities).
+    * **Regular User:** Can only manage their own resources.
+    * **Public:** Can view places and details.
 
-API Endpoints: Flask RESTful routes with JWT authentication and admin/user permissions
-
-Features
-1. Authentication & Authorization
-
-JWT-based authentication using flask-jwt-extended
-
-Role-based access:
-
-Admin: Full control over users, places, reviews, and amenities
-
-Authenticated User: Manage own places, reviews, and personal info
-
-Public: Can view places and place details
-
-2. Entities
-
-User
-
-Attributes: first_name, last_name, email, password, is_admin
-
-Passwords are hashed using Flask-Bcrypt
-
-Place
-
-Attributes: title, description, price, latitude, longitude, owner_id
-
-Review
-
-Attributes: text, rating, user_id, place_id
-
-Amenity
-
-Attributes: name (unique)
-
-3. Role-Based Endpoints
-
-Public
-
-GET /api/v1/places/ - List all places
-
-GET /api/v1/places/<place_id> - Retrieve a place
-
-Authenticated Users
-
-Create, update, delete places (owned by user)
-
-Create, update, delete reviews (own reviews only)
-
-Update own user profile (excluding email and password)
-
-Admins
-
-Create and modify users (email/password allowed)
-
-Create and modify amenities
-
-Bypass ownership restrictions for places and reviews
-
-Project Structure
+## Project Structure
+```text
 holbertonschool-hbnb/
 ├── app/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── models/
+│   ├── __init__.py          # App factory and DB configuration
+│   ├── config.py            # Environment configurations
+│   ├── models/              # SQLAlchemy Models
 │   │   ├── base_model.py
 │   │   ├── user.py
 │   │   ├── place.py
 │   │   ├── review.py
 │   │   └── amenity.py
-│   ├── persistence/
-│   │   ├── repository.py
-│   │   └── user_repository.py
-│   ├── services/
+│   ├── persistence/         # Database Repositories
+│   │   └── repository.py    # Generic SQLAlchemy Repository
+│   ├── services/            # Business Logic Layer
 │   │   └── facade.py
-│   ├── api/
-│   │   └── v1/
-│   │       ├── users.py
-│   │       ├── places.py
-│   │       ├── reviews.py
-│   │       └── amenities.py
-│   └── extensions.py
-├── requirements.txt
-├── run.py
-└── README.md
-
-Installation
-
+│   └── api/                 # API Endpoints (Blueprints)
+│       └── v1/
+│           ├── users.py
+│           ├── places.py
+│           ├── reviews.py
+│           └── amenities.py
+├── instance/                # Contains the SQLite DB file
+├── requirements.txt         # Python dependencies
+├── run.py                   # Entry point
+├── schema.sql               # SQL script for schema creation
+└── seed.sql                 # SQL script for initial data
+Installation & Setup
 Clone the repository:
 
-git clone https://github.com/<your-username>/holbertonschool-hbnb.git
-cd holbertonschool-hbnb
-
-
+git clone [https://github.com/](https://github.com/)<your-username>/holbertonschool-hbnb.git
+cd holbertonschool-hbnb/part3
 Create a virtual environment:
 
 python3 -m venv venv
 source venv/bin/activate
-
-
 Install dependencies:
 
 pip install -r requirements.txt
+Initialize the Database: Run the application to auto-generate the instance/development.db file:
 
-
-Set environment variables (optional):
-
-export FLASK_APP=run.py
-export FLASK_ENV=development
-export SECRET_KEY="your_secret_key"
-
-
-Initialize the database:
-
-flask shell
->>> from app import db
->>> db.create_all()
+python3 run.py
+(Alternatively, you can use schema.sql and seed.sql to populate data manually).
 
 Usage
-Running the API:
-flask run
+Start the Flask server:
 
+python3 run.py
+The API will be available at: http://127.0.0.1:5000/
 
-The API will be available at: http://127.0.0.1:5000/api/v1/
+API Examples
+1. Register a User:
 
-Example Endpoints:
-Public
-curl -X GET "http://127.0.0.1:5000/api/v1/places/"
+curl -X POST "[http://127.0.0.1:5000/api/v1/users/](http://127.0.0.1:5000/api/v1/users/)" \
+     -H "Content-Type: application/json" \
+     -d '{"first_name": "John", "last_name": "Doe", "email": "john@example.com", "password": "securepass"}'
+2. Login (Get Token):
 
-Authenticated User (JWT Token Required)
-curl -X POST "http://127.0.0.1:5000/api/v1/places/" \
--H "Authorization: Bearer <JWT_TOKEN>" \
--H "Content-Type: application/json" \
--d '{"title": "New Place", "description": "Cozy apartment", "price": 100}'
+curl -X POST "[http://127.0.0.1:5000/login](http://127.0.0.1:5000/login)" \
+     -H "Content-Type: application/json" \
+     -d '{"email": "john@example.com", "password": "securepass"}'
+3. Create a Place (Protected):
 
-Admin (JWT Token with is_admin=True)
-curl -X POST "http://127.0.0.1:5000/api/v1/users/" \
--H "Authorization: Bearer <ADMIN_JWT>" \
--H "Content-Type: application/json" \
--d '{"first_name": "Admin", "last_name": "User", "email": "admin@example.com", "password": "password123"}'
+curl -X POST "[http://127.0.0.1:5000/api/v1/places/](http://127.0.0.1:5000/api/v1/places/)" \
+     -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+     -H "Content-Type: application/json" \
+     -d '{"title": "Cozy Cabin", "description": "Mountain view", "price": 150.0, "latitude": 34.0, "longitude": -118.0}'
+Database Schema Design (ER Diagram)
+The following diagram visualizes the relationships between the entities in the database.
 
-Testing
+مقتطف الرمز
+erDiagram
+    User {
+        string id PK
+        string email
+        string password
+        string first_name
+        string last_name
+        boolean is_admin
+    }
 
-Use Postman or cURL to test:
+    Place {
+        string id PK
+        string title
+        string description
+        float price
+        float latitude
+        float longitude
+        string user_id FK
+    }
 
-User registration and authentication
+    Review {
+        string id PK
+        string text
+        int rating
+        string user_id FK
+        string place_id FK
+    }
 
-Place CRUD operations
+    Amenity {
+        string id PK
+        string name
+    }
 
-Review CRUD operations
+    Place_Amenity {
+        string place_id FK
+        string amenity_id FK
+    }
 
-Amenity management
-
-Admin-only actions
-
+    %% Relationships
+    User ||--o{ Place : "owns"
+    User ||--o{ Review : "writes"
+    Place ||--o{ Review : "has"
+    Place }|..|{ Amenity : "features"
 Technologies Used
+Python 3.8+
 
-Python 3
+Flask (Web Framework)
 
-Flask
+SQLAlchemy (ORM)
 
-Flask-RESTX
+SQLite (Database)
 
-Flask-JWT-Extended
+Flask-JWT-Extended (Authentication)
 
-Flask-Bcrypt
+Bcrypt (Password Hashing)
 
-SQLAlchemy / Flask-SQLAlchemy
-
-SQLite (development)
+Mermaid.js (Documentation)
 
 License
-
-This project is for educational purposes for Holberton School and does not have an open-source license.
+This project is part of the Holberton School curriculum.
