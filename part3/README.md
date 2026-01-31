@@ -92,7 +92,6 @@ curl -X POST "[http://127.0.0.1:5000/api/v1/places/](http://127.0.0.1:5000/api/v
 Database Schema Design (ER Diagram)
 The following diagram visualizes the relationships between the entities in the database.
 
-مقتطف الرمز
 erDiagram
     User {
         string id PK
