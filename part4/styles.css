@@ -1,0 +1,95 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+}
+
+/* Header */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: #333;
+    color: white;
+}
+
+.logo {
+    height: 40px;
+}
+
+.login-button {
+    background-color: #ff5a5f;
+    color: white;
+    padding: 8px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+/* Navigation */
+nav {
+    background-color: #444;
+    padding: 10px 20px;
+}
+
+nav a {
+    color: white;
+    margin-right: 15px;
+    text-decoration: none;
+}
+
+/* Main */
+main {
+    padding: 20px;
+}
+
+/* Cards (REQUIRED FIXED PARAMETERS) */
+.place-card,
+.review-card {
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background-color: white;
+}
+
+/* Place Details */
+.place-details {
+    margin: 20px;
+}
+
+.place-info {
+    margin-top: 10px;
+}
+
+/* Forms */
+.form {
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+}
+
+.form input,
+.form textarea {
+    margin-bottom: 10px;
+    padding: 8px;
+}
+
+button,
+.details-button {
+    background-color: #ff5a5f;
+    color: white;
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+footer {
+    text-align: center;
+    padding: 15px;
+    background-color: #333;
+    color: white;
+    margin-top: 40px;
+}
+
